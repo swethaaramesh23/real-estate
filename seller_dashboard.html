@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seller Dashboard | ApexRealty</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0b1329;
+            --secondary-color: #1a233d;
+            --accent-color: #c5a880;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --info: #0ea5e9;
+            --border: #e2e8f0;
+            --font-body: 'Inter', sans-serif;
+            --font-heading: 'Outfit', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .weather-banner { animation: fadeSlideUp 0.6s ease-out forwards; opacity: 0; }
+        .dashboard-grid .card { animation: fadeSlideUp 0.6s ease-out forwards; opacity: 0; }
+        .dashboard-grid .card:nth-child(1) { animation-delay: 0.1s; }
+        .dashboard-grid .card:nth-child(2) { animation-delay: 0.2s; }
+        .dashboard-grid .card:nth-child(3) { animation-delay: 0.3s; }
+        .dashboard-grid .card:nth-child(4) { animation-delay: 0.4s; }
+        .dashboard-grid .card:nth-child(5) { animation-delay: 0.5s; }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+            padding-top: 0 !important;
+        }
+
+        .site-header {
+            display: none !important;
+        }
+
+        /* ── Preloader ── */
+        #preloader {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #fff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.6s ease;
+        }
+        #preloader img {
+            width: 120px;
+            animation: preloaderPulse 1.5s ease-in-out infinite;
+        }
+        #preloader p {
+            color: var(--accent-color);
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-top: 16px;
+            letter-spacing: 1px;
+        }
+        @keyframes preloaderPulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50%       { transform: scale(1.08); opacity: 1; }
+        }
+        .fade-out { opacity: 0; pointer-events: none; }
+
+        /* ── Sidebar ── */
+        .sidebar {
+            width: 260px;
+            background-color: var(--primary-color);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            left: 0; top: 0;
+            z-index: 200;
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .sidebar-header img {
+            width: 40px; height: 40px;
+            background: #fff;
+            padding: 5px;
+            border-radius: 8px;
+            object-fit: contain;
+        }
+        .sidebar-header h2 {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            color: #fff;
+        }
+        .nav-items {
+            flex: 1;
+            padding: 20px 0;
+            overflow-y: auto;
+        }
+        .nav-item {
+            padding: 15px 24px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(255,255,255,0.08);
+            color: #fff;
+            border-left: 4px solid var(--accent-color);
+        }
+        .sidebar-footer {
+            padding: 24px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+        .logout-btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+        }
+        .logout-btn:hover { background: rgba(239,68,68,0.8); }
+
+        /* ── Hamburger ── */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            flex-direction: column;
+            gap: 5px;
+            padding: 8px;
+        }
+        .hamburger span {
+            display: block;
+            width: 25px; height: 3px;
+            background: var(--text-dark);
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        /* ── Overlay ── */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 150;
+        }
+        .sidebar-overlay.active { display: block; }
+
+        /* ── Main Content ── */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            padding: 30px 40px;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .page-title {
+            font-family: var(--font-heading);
+            font-size: 1.8rem;
+            color: var(--text-dark);
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: var(--card-bg);
+            padding: 8px 16px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            font-weight: 600;
+        }
+
+        /* ── Market Snapshot Banner ── */
+        .weather-banner {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 10px 25px rgba(11,19,41,0.15);
+            border-left: 5px solid var(--accent-color);
+        }
+        .weather-info {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .weather-temp {
+            font-size: 3rem;
+            font-weight: 800;
+            font-family: var(--font-heading);
+            color: var(--accent-color);
+            line-height: 1;
+        }
+        .weather-details p {
+            font-size: 1rem;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+        .weather-alert {
+            background: rgba(255,255,255,0.08);
+            padding: 12px 20px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            font-weight: 600;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* ── Grid Layout ── */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03), 0 2px 4px -1px rgba(0,0,0,0.01);
+            border: 1px solid var(--border);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px rgba(0,0,0,0.05);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+        .card-title {
+            font-family: var(--font-heading);
+            font-size: 1.2rem;
+            color: var(--text-dark);
+        }
+
+        /* ── Sections ── */
+        .crop-section      { grid-column: span 8; }
+        .soil-section      { grid-column: span 4; }
+        .task-section      { grid-column: span 4; }
+        .market-section    { grid-column: span 4; }
+        .inventory-section { grid-column: span 4; }
+
+        /* ── Property Listings ── */
+        .crop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .crop-item {
+            padding: 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background: #fafafa;
+        }
+        .crop-name { font-weight: 700; font-size: 1.05rem; }
+        .progress-bar-bg {
+            background: #e2e8f0;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 5px 0;
+        }
+        .progress-bar-fill { background: var(--accent-color); height: 100%; }
+        .crop-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        .badge {
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-block;
+        }
+        .badge.good    { background: #dcfce7; color: #166534; }
+        .badge.warning { background: #fef9c3; color: #854d0e; }
+
+        /* ── Property Inquiries & Analytics ── */
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-name { font-weight: 600; color: var(--text-dark); }
+        .stat-val  { font-weight: 800; font-size: 1.1rem; color: var(--secondary-color); }
+
+        /* ── Checklist ── */
+        .task-list { list-style: none; }
+        .task-list li {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .task-list li:last-child { border-bottom: none; }
+        .task-list input[type="checkbox"] {
+            width: 18px; height: 18px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .task-list span { font-weight: 500; font-size: 0.95rem; }
+        .task-list .date { margin-left: auto; color: var(--warning); font-size: 0.8rem; font-weight: 700; }
+
+        /* ── Regional Property Index ── */
+        .market-list { list-style: none; }
+        .market-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .market-list li:last-child { border-bottom: none; }
+        .price-up   { color: var(--success); font-weight: 700; }
+        .price-down { color: var(--danger);  font-weight: 700; }
+
+        /* ── Document Pipeline ── */
+        .inv-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .inv-item:last-child { border-bottom: none; }
+        .inv-bar-wrapper { width: 100px; }
+
+        /* ── Tablet ── */
+        @media (max-width: 1024px) {
+            .crop-section      { grid-column: span 12; }
+            .soil-section      { grid-column: span 6; }
+            .task-section      { grid-column: span 6; }
+            .market-section    { grid-column: span 6; }
+            .inventory-section { grid-column: span 6; }
+        }
+
+        /* ── Mobile ── */
+        @media (max-width: 768px) {
+            .hamburger { display: flex; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; }
+            .sidebar.open { transform: translateX(0); }
+
+            .main-content { margin-left: 0; padding: 20px 16px; }
+            .page-title { font-size: 1.3rem; }
+
+            .weather-banner  { flex-direction: column; align-items: flex-start; padding: 18px; }
+            .weather-temp    { font-size: 2.5rem; }
+            .dashboard-grid  { gap: 16px; }
+
+            .crop-section, .soil-section, .task-section,
+            .market-section, .inventory-section {
+                grid-column: span 12;
+            }
+
+            .crop-grid { grid-template-columns: 1fr; }
+            .inv-bar-wrapper { width: 70px; }
+            .user-profile { font-size: 0.9rem; padding: 6px 12px; }
+            .card { padding: 16px; }
+            .card-title { font-size: 1rem; }
+        }
+
+        @media (max-width: 480px) {
+            .main-content { padding: 12px 10px; }
+            .weather-temp { font-size: 2rem; }
+            .stat-val { font-size: 1rem; }
+            .task-list span { font-size: 0.88rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <img src="blue logo.webp" alt="ApexRealty Logo">
+        <p>Finding Your Dream Property...</p>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="blue logo.webp" alt="Logo">
+            <h2>Seller Hub</h2>
+        </div>
+        <nav class="nav-items">
+            <a href="javascript:void(0)" class="nav-item active">Dashboard Overview</a>
+            <a href="#properties" class="nav-item">My Properties</a>
+            <a href="#soil"       class="nav-item">Listing Inquiries</a>
+            <a href="#inventory"  class="nav-item">Document Pipeline</a>
+            <a href="#market"     class="nav-item">Regional Trends</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="javascript:void(0)" class="logout-btn" onclick="handleLogout()">🚪 Log Out</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <!-- Hamburger (mobile only) -->
+            <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <h1 class="page-title">Seller Dashboard</h1>
+            <div class="user-profile">
+                <span id="userNameDisplay">🏠 Seller</span>
+            </div>
+        </header>
+
+        <!-- Market Snapshot Forecast -->
+        <div class="weather-banner">
+            <div class="weather-info">
+                <div class="weather-temp">+8.4%</div>
+                <div class="weather-details">
+                    <p style="font-size:1.2rem;font-weight:700;">Regional Market Growth</p>
+                    <p>Average Price/sqft: ₹6,480 | Listings Active: 148</p>
+                    <p>Inquiries peak forecast: Up 15% next month</p>
+                </div>
+            </div>
+            <div class="weather-alert">
+                🔔 Alert: Interest rate cut expected soon. Property search volumes are high.
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+
+            <!-- Properties Monitoring -->
+            <div class="card crop-section" id="properties">
+                <div class="card-header">
+                    <h3 class="card-title">Active Properties Tracking</h3>
+                </div>
+                <div class="crop-grid">
+                    <div class="crop-item">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span class="crop-name">4 BHK Luxury Villa (Trichy)</span>
+                            <span class="badge good">Listed</span>
+                        </div>
+                        <div>
+                            <div class="crop-meta">
+                                <span>Sales Pipeline</span>
+                                <span>Under Negotiation (60%)</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width:60%;"></div>
+                            </div>
+                        </div>
+                        <div class="crop-meta">
+                            <span>Target Closing Date:</span>
+                            <span style="font-weight:700;color:var(--text-dark);">Oct 15, 2026</span>
+                        </div>
+                    </div>
+
+                    <div class="crop-item">
+                        <div style="display:flex;justify-content:space-between;">
+                            <span class="crop-name">3 BHK Cozy Apartment (Salem)</span>
+                            <span class="badge warning">Reviewing Offers</span>
+                        </div>
+                        <div>
+                            <div class="crop-meta">
+                                <span>Sales Pipeline</span>
+                                <span>Valuation & Inspection (40%)</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width:40%;background:var(--warning);"></div>
+                            </div>
+                        </div>
+                        <div class="crop-meta">
+                            <span>Target Closing Date:</span>
+                            <span style="font-weight:700;color:var(--text-dark);">Nov 02, 2026</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inquiries & Analytics -->
+            <div class="card soil-section" id="soil">
+                <div class="card-header">
+                    <h3 class="card-title">Inquiries &amp; Analytics</h3>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Total Leads</span>
+                    <span class="stat-val">148 Leads</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Listing Views</span>
+                    <span class="stat-val">2,410 Views</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Offers Received</span>
+                    <span class="stat-val">3 Offers</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-name">Avg Property Value</span>
+                    <span class="stat-val" style="color:var(--accent-color);">₹85 Lakhs</span>
+                </div>
+            </div>
+
+            <!-- Seller Checklist Planner -->
+            <div class="card task-section">
+                <div class="card-header">
+                    <h3 class="card-title">Seller Checklist</h3>
+                </div>
+                <ul class="task-list">
+                    <li>
+                        <input type="checkbox">
+                        <span>Schedule RERA registration inspection</span>
+                        <span class="date">Today 4:00 PM</span>
+                    </li>
+                    <li>
+                        <input type="checkbox" checked>
+                        <span style="text-decoration:line-through;color:var(--text-muted);">Upload drone video of Trichy Villa</span>
+                        <span class="date" style="color:var(--text-muted);">Done</span>
+                    </li>
+                    <li>
+                        <input type="checkbox">
+                        <span>Respond to Buyer offer on Salem Flat</span>
+                        <span class="date">Tomorrow</span>
+                    </li>
+                    <li>
+                        <input type="checkbox">
+                        <span>Verify property tax receipts upload</span>
+                        <span class="date">Friday</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Regional Property Index -->
+            <div class="card market-section" id="market">
+                <div class="card-header">
+                    <h3 class="card-title">Regional Property Index</h3>
+                </div>
+                <ul class="market-list">
+                    <li>
+                        <span style="font-weight:600;">Chennai - Adyar (per sqft)</span>
+                        <span class="price-up">₹14,500 ▲</span>
+                    </li>
+                    <li>
+                        <span style="font-weight:600;">Salem - Junction (per sqft)</span>
+                        <span class="price-down">₹4,200 ▼</span>
+                    </li>
+                    <li>
+                        <span style="font-weight:600;">Trichy - Cantonment (per sqft)</span>
+                        <span class="price-up">₹6,800 ▲</span>
+                    </li>
+                    <li>
+                        <span style="font-weight:600;">Coimbatore - RS Puram</span>
+                        <span class="price-down">₹8,500 ▼</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Document Pipeline Tracking -->
+            <div class="card inventory-section" id="inventory">
+                <div class="card-header">
+                    <h3 class="card-title">Document Checklist</h3>
+                </div>
+                <div class="inv-item">
+                    <span style="font-weight:600;">Sale Deed Copy</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="inv-bar-wrapper progress-bar-bg"><div class="progress-bar-fill" style="width:80%;"></div></div>
+                        <span style="font-size:0.85rem;font-weight:700;">Verified</span>
+                    </div>
+                </div>
+                <div class="inv-item">
+                    <span style="font-weight:600;">Encumbrance Cert</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="inv-bar-wrapper progress-bar-bg"><div class="progress-bar-fill" style="width:100%;"></div></div>
+                        <span style="font-size:0.85rem;font-weight:700;">Approved</span>
+                    </div>
+                </div>
+                <div class="inv-item">
+                    <span style="font-weight:600;">Property Tax Clearance</span>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <div class="inv-bar-wrapper progress-bar-bg"><div class="progress-bar-fill" style="width:25%;background:var(--warning);"></div></div>
+                        <span style="font-size:0.85rem;font-weight:700;">Pending</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => preloader.style.display = 'none', 600);
+            }, 1200);
+        });
+
+        // User name
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.name) {
+                document.getElementById('userNameDisplay').textContent = '🏠 ' + currentUser.name;
+            }
+        });
+
+        // Mobile Sidebar
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                if (window.innerWidth <= 768) closeSidebar();
+            });
+        });
+
+        // Logout
+        function handleLogout() {
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

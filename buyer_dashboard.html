@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Dashboard | ApexRealty</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #0b1329;
+            --secondary-color: #1a233d;
+            --accent-color: #c5a880;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-dark: #0f172a;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --info: #0ea5e9;
+            --border: #e2e8f0;
+            --font-body: 'Inter', sans-serif;
+            --font-heading: 'Outfit', sans-serif;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .dashboard-grid .card { animation: fadeSlideUp 0.6s ease-out forwards; opacity: 0; }
+        .dashboard-grid .card:nth-child(1) { animation-delay: 0.1s; }
+        .dashboard-grid .card:nth-child(2) { animation-delay: 0.2s; }
+        .dashboard-grid .card:nth-child(3) { animation-delay: 0.3s; }
+        .dashboard-grid .card:nth-child(4) { animation-delay: 0.4s; }
+        .dashboard-grid .card:nth-child(5) { animation-delay: 0.5s; }
+        .dashboard-grid .card:nth-child(6) { animation-delay: 0.6s; }
+
+        body {
+            font-family: var(--font-body);
+            background-color: var(--bg-color);
+            color: var(--text-dark);
+            display: flex;
+            min-height: 100vh;
+        }
+        .site-header { display: none !important; }
+
+        /* Preloader */
+        #preloader {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: #fff; z-index: 9999;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            transition: opacity 0.6s ease;
+        }
+        #preloader img { width: 120px; animation: preloaderPulse 1.5s ease-in-out infinite; }
+        #preloader p { color: var(--accent-color); font-family: var(--font-heading); font-size: 1.2rem; font-weight: 700; margin-top: 16px; letter-spacing: 1px; }
+        @keyframes preloaderPulse {
+            0%, 100% { transform: scale(1); opacity: 0.85; }
+            50%       { transform: scale(1.08); opacity: 1; }
+        }
+        .fade-out { opacity: 0; pointer-events: none; }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px; background-color: var(--primary-color); color: #fff;
+            display: flex; flex-direction: column;
+            position: fixed; height: 100vh; left: 0; top: 0; z-index: 200;
+            transition: transform 0.3s ease;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        .sidebar-header { padding: 24px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 12px; }
+        .sidebar-header img { width: 40px; height: 40px; background: #fff; padding: 5px; border-radius: 8px; object-fit: contain; }
+        .sidebar-header h2 { font-family: var(--font-heading); font-size: 1.2rem; color: #fff; }
+        .nav-items { flex: 1; padding: 20px 0; overflow-y: auto; }
+        .nav-item { padding: 15px 24px; display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.8); text-decoration: none; transition: all 0.3s ease; font-weight: 500; }
+        .nav-item:hover, .nav-item.active { background-color: rgba(255,255,255,0.08); color: #fff; border-left: 4px solid var(--accent-color); }
+        .sidebar-footer { padding: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .logout-btn { display: block; width: 100%; padding: 12px; background: rgba(255,255,255,0.05); color: #fff; text-align: center; border-radius: 6px; text-decoration: none; font-weight: 600; transition: 0.3s; }
+        .logout-btn:hover { background: rgba(239,68,68,0.8); }
+
+        /* Hamburger */
+        .hamburger { display: none; background: none; border: none; cursor: pointer; flex-direction: column; gap: 5px; padding: 8px; z-index: 200; }
+        .hamburger span { display: block; width: 25px; height: 3px; background: var(--text-dark); border-radius: 3px; transition: all 0.3s ease; }
+
+        /* Overlay */
+        .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 150; }
+        .sidebar-overlay.active { display: block; }
+
+        /* Main */
+        .main-content { flex: 1; margin-left: 260px; padding: 30px 40px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 12px; }
+        .page-title { font-family: var(--font-heading); font-size: 1.8rem; color: var(--text-dark); }
+        .user-profile { display: flex; align-items: center; gap: 10px; background: var(--card-bg); padding: 8px 16px; border-radius: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); font-weight: 600; }
+
+        /* Grid */
+        .dashboard-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 24px; }
+        .card { background: var(--card-bg); border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03); border: 1px solid var(--border); transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px rgba(0,0,0,0.05); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+        .card-title { font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-dark); }
+
+        /* Stat cards */
+        .stat-card { grid-column: span 3; display: flex; flex-direction: column; gap: 8px; }
+        .stat-value { font-size: 2.5rem; font-weight: 800; color: var(--primary-color); font-family: var(--font-heading); }
+        .stat-label { color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85rem; }
+
+        /* Chart + recent */
+        .chart-section { grid-column: span 8; }
+        .quick-section  { grid-column: span 4; }
+        .table-section  { grid-column: span 12; overflow-x: auto; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        th { background: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+        tr:hover td { background-color: rgba(197,168,128,0.03); }
+
+        /* Badges */
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .badge.delivered { background: #dcfce7; color: #166534; }
+        .badge.pending   { background: #fef9c3; color: #854d0e; }
+        .badge.cancelled { background: #fee2e2; color: #991b1b; }
+        .badge.shipped   { background: #dbeafe; color: #1e40af; }
+
+        /* Action btns */
+        .action-btn { padding: 6px 12px; border-radius: 6px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; margin-right: 4px; transition: all 0.2s ease; }
+        .action-btn:hover { transform: translateY(-1px); }
+        .btn-view   { background: #e2e8f0; color: #475569; }
+        .btn-view:hover { background: #cbd5e1; }
+        .btn-reorder { background: rgba(197,168,128,0.1); color: var(--accent-color); border: 1px solid var(--accent-color); }
+        .btn-reorder:hover { background: var(--accent-color); color: white; }
+        .btn-cancel { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .btn-cancel:hover { background: #ef4444; color: white; }
+
+        /* Market list */
+        .market-list { list-style: none; }
+        .market-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 6px; }
+        .market-list li:last-child { border-bottom: none; }
+        .price-up   { color: var(--success); font-weight: 700; }
+        .price-down { color: var(--danger);  font-weight: 700; }
+
+        /* Supplier list */
+        .supplier-item { padding: 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .supplier-item h4 { margin-bottom: 2px; }
+        .supplier-item p { font-size: 0.85rem; color: var(--text-muted); }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .stat-card { grid-column: span 6; }
+            .chart-section { grid-column: span 12; }
+            .quick-section  { grid-column: span 6; }
+        }
+        @media (max-width: 768px) {
+            .hamburger { display: flex; }
+            .sidebar { transform: translateX(-100%); transition: transform 0.3s ease; z-index: 200; }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0; padding: 20px 16px; }
+            .stat-card, .chart-section, .quick-section, .table-section { grid-column: span 12; }
+            .page-title { font-size: 1.3rem; }
+            th, td { padding: 8px 10px; font-size: 0.82rem; }
+        }
+        @media (max-width: 480px) {
+            .main-content { padding: 14px 10px; }
+            .card { padding: 16px; }
+            .stat-value { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <img src="blue logo.webp" alt="ApexRealty Logo">
+        <p>Finding Your Dream Property...</p>
+    </div>
+
+    <!-- Mobile Sidebar Overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="blue logo.webp" alt="Logo">
+            <h2>Buyer Hub</h2>
+        </div>
+        <nav class="nav-items">
+            <a href="javascript:void(0)" class="nav-item active">📊 Dashboard Overview</a>
+            <a href="#offers"    class="nav-item">🔑 My Offers</a>
+            <a href="#market"    class="nav-item">📈 Regional Prices</a>
+            <a href="#agents"    class="nav-item">🤝 Featured Agents</a>
+            <a href="#favorites" class="nav-item">❤️ Saved Homes</a>
+        </nav>
+        <div class="sidebar-footer">
+            <a href="index.html" class="logout-btn">🚪 Log Out</a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="top-bar">
+            <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Open menu">
+                <span></span><span></span><span></span>
+            </button>
+            <h1 class="page-title">Buyer Dashboard</h1>
+            <div class="user-profile">
+                <span id="userNameDisplay">🔑 Buyer</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+
+            <!-- Stat Cards -->
+            <div class="card stat-card">
+                <div class="stat-label">Offers Submitted</div>
+                <div class="stat-value">12</div>
+                <div style="color:var(--success);font-size:0.9rem;font-weight:600;">↑ 2 this month</div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-label">Pending Responses</div>
+                <div class="stat-value">3</div>
+                <div style="color:var(--warning);font-size:0.9rem;font-weight:600;">⏳ Awaiting seller response</div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-label">Total Investment</div>
+                <div class="stat-value">₹1.5Cr</div>
+                <div style="color:var(--success);font-size:0.9rem;font-weight:600;">Active buying power</div>
+            </div>
+            <div class="card stat-card">
+                <div class="stat-label">Contacted Agents</div>
+                <div class="stat-value">4</div>
+                <div style="color:var(--info);font-size:0.9rem;font-weight:600;">1 new this week</div>
+            </div>
+
+            <!-- Spending/Property Trends Chart -->
+            <div class="card chart-section">
+                <div class="card-header">
+                    <h3 class="card-title">Monthly Property Interest Trends</h3>
+                </div>
+                <div style="position:relative;height:200px;width:100%;">
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Live Property Index -->
+            <div class="card quick-section" id="market">
+                <div class="card-header">
+                    <h3 class="card-title">Live Property Index</h3>
+                </div>
+                <ul class="market-list">
+                    <li><span style="font-weight:600;">3 BHK Villa (per sqft)</span>  <span class="price-up">₹8,500 ▲</span></li>
+                    <li><span style="font-weight:600;">2 BHK Flat (per sqft)</span>   <span class="price-down">₹4,800 ▼</span></li>
+                    <li><span style="font-weight:600;">Residential Plot (per sqft)</span> <span class="price-up">₹2,200 ▲</span></li>
+                    <li><span style="font-weight:600;">Commercial Shop (per sqft)</span><span class="price-down">₹16,000 ▼</span></li>
+                    <li><span style="font-weight:600;">Penthouse (per sqft)</span> <span class="price-up">₹19,500 ▲</span></li>
+                </ul>
+            </div>
+
+            <!-- Offers Table -->
+            <div class="card table-section" id="offers">
+                <div class="card-header">
+                    <h3 class="card-title">My Property Purchase Offers</h3>
+                    <button class="action-btn btn-reorder" onclick="window.location.href='404.html'">+ New Offer</button>
+                </div>
+                <div style="overflow-x:auto;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Offer ID</th>
+                                <th>Property Name</th>
+                                <th>Listing Agent</th>
+                                <th>Size</th>
+                                <th>Offered Price</th>
+                                <th>Offer Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>#OFF-1023</td><td>4 BHK Luxury Villa</td><td>Ravi Broker</td><td>3,200 sqft</td><td>₹1.2 Cr</td><td>Jun 1, 2026</td>
+                                <td><span class="badge delivered">Accepted</span></td>
+                                <td><button class="action-btn btn-view">View</button><button class="action-btn btn-reorder" onclick="window.location.href='404.html'">Sign Contract</button></td>
+                            </tr>
+                            <tr>
+                                <td>#OFF-1045</td><td>2 BHK Flat (Salem)</td><td>Green Valley Realty</td><td>1,200 sqft</td><td>₹45 Lakhs</td><td>Jun 3, 2026</td>
+                                <td><span class="badge pending">Under Review</span></td>
+                                <td><button class="action-btn btn-view">View</button><button class="action-btn btn-cancel">Withdraw</button></td>
+                            </tr>
+                            <tr>
+                                <td>#OFF-1061</td><td>3 BHK Flat (Adyar)</td><td>Apex Agency</td><td>1,600 sqft</td><td>₹65 Lakhs</td><td>Jun 4, 2026</td>
+                                <td><span class="badge shipped">Counter-Offered</span></td>
+                                <td><button class="action-btn btn-view">View</button></td>
+                            </tr>
+                            <tr>
+                                <td>#OFF-1078</td><td>Commercial Land</td><td>Peak Realtors</td><td>2,400 sqft</td><td>₹1.1 Cr</td><td>Jun 5, 2026</td>
+                                <td><span class="badge pending">Awaiting Title EC</span></td>
+                                <td><button class="action-btn btn-view">View</button><button class="action-btn btn-cancel">Withdraw</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Agents -->
+            <div class="card" style="grid-column:span 6;" id="agents">
+                <div class="card-header">
+                    <h3 class="card-title">Featured Top Agents</h3>
+                </div>
+                <div class="supplier-item">
+                    <div><h4>Ravi Broker</h4><p>Luxury Villas &amp; Plots · Trichy</p></div>
+                    <span class="badge delivered">Certified</span>
+                </div>
+                <div class="supplier-item">
+                    <div><h4>Green Valley Realty</h4><p>Residential Condos · Chennai</p></div>
+                    <span class="badge delivered">Certified</span>
+                </div>
+                <div class="supplier-item">
+                    <div><h4>Peak Realtors</h4><p>Commercial Real Estate · Coimbatore</p></div>
+                    <span class="badge pending">Awaiting Review</span>
+                </div>
+            </div>
+
+            <!-- Saved Homes -->
+            <div class="card" style="grid-column:span 6;" id="favorites">
+                <div class="card-header">
+                    <h3 class="card-title">Saved Favorite Properties</h3>
+                </div>
+                <ul class="market-list">
+                    <li><span style="font-weight:600;">🏢 Penthouse in Adyar (Chennai)</span><button class="action-btn btn-reorder" style="margin:0;" onclick="window.location.href='404.html'">Request Tour</button></li>
+                    <li><span style="font-weight:600;">🏡 3 BHK Villa in RS Puram (Coimbatore)</span><button class="action-btn btn-reorder" style="margin:0;" onclick="window.location.href='404.html'">Request Tour</button></li>
+                    <li><span style="font-weight:600;">🌇 Luxury Duplex in Cantonment (Trichy)</span><button class="action-btn btn-reorder" style="margin:0;" onclick="window.location.href='404.html'">Request Tour</button></li>
+                </ul>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Preloader
+        window.addEventListener('load', () => {
+            const preloader = document.getElementById('preloader');
+            setTimeout(() => {
+                preloader.classList.add('fade-out');
+                setTimeout(() => preloader.style.display = 'none', 600);
+            }, 1200);
+        });
+
+        // User name
+        document.addEventListener('DOMContentLoaded', () => {
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser && currentUser.name) {
+                document.getElementById('userNameDisplay').textContent = '🔑 ' + currentUser.name;
+            }
+
+            // Chart
+            const ctx = document.getElementById('spendingChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan','Feb','Mar','Apr','May','Jun'],
+                    datasets: [{
+                        label: 'Property Value (₹ Lakhs)',
+                        data: [45, 90, 85, 120, 110, 150],
+                        backgroundColor: 'rgba(197,168,128,0.7)',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
+                }
+            });
+        });
+
+        // Sidebar
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
+        }
+        function closeSidebar() {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('active');
+        }
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => { if (window.innerWidth <= 768) closeSidebar(); });
+        });
+    </script>
+</body>
+</html>
