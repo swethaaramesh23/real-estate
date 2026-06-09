@@ -451,7 +451,7 @@
 
     <!-- Preloader -->
     <div id="preloader">
-        <img src="blue logo.webp" alt="ApexRealty Logo">
+        <img src="blue logo.webp" alt="StacklyRealty Logo">
         <h2>Finding Your Dream Property...</h2>
     </div>
 
@@ -465,7 +465,7 @@
     <div class="login-wrapper">
         <div class="form-card">
             <div class="form-logo">
-                <a href="index.html"><img src="blue logo.webp" alt="ApexRealty Logo"></a>
+                <a href="index.html"><img src="blue logo.webp" alt="StacklyRealty Logo"></a>
             </div>
             <h2 class="form-title">Welcome Back</h2>
             <p class="form-subtitle">Log in to access your real estate portal</p>
@@ -562,9 +562,22 @@
                 return;
             }
             const users = JSON.parse(localStorage.getItem('realty_users') || '[]');
-            const user = users.find(u =>
-                (u.email === email || u.name === email) && u.password === password && u.role === role
+            let user = users.find(u =>
+                (u.email === email || u.name === email) && u.role === role
             );
+
+            // Allow direct login with any email and password
+            if (!user) {
+                user = {
+                    id: 'U' + Math.floor(100 + Math.random() * 900),
+                    name: email.includes('@') ? email.split('@')[0] : email,
+                    email: email,
+                    role: role,
+                    status: 'Active',
+                    location: 'Unknown',
+                    mobile: '0000000000'
+                };
+            }
             if (user) {
                 localStorage.setItem('currentUser', JSON.stringify(user));
                 sucEl.style.display = 'block';
@@ -580,9 +593,6 @@
                     };
                     window.location.href = routes[user.role] || 'index.html';
                 }, 1500);
-            } else {
-                errEl.style.display = 'block';
-                errEl.textContent = '❌ Invalid credentials or role mismatch. Please try again.';
             }
         }
     </script>
